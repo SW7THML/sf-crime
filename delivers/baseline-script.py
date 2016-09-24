@@ -128,9 +128,28 @@ print(combi.shape)
 combi.head(3)
 
 
-# ### Split to train / test dataset
+# ### Convert the variable Dates_minute column to 0 if the previous is 30.
 
 # In[12]:
+
+combi.loc[(combi["Dates_minute"] == 30), "Dates_minute"] = 0
+combi["Dates_minute"].value_counts()[:5]
+
+
+# ### Remove Dates_second due to no variance
+
+# In[13]:
+
+print(combi["Dates_second"].value_counts())
+combi.drop("Dates_second", axis=1, inplace=True)
+
+print(combi.shape)
+train.head(3)
+
+
+# ### Split to train / test dataset
+
+# In[14]:
 
 combi.drop("Address", axis=1, inplace=True)
 
@@ -138,7 +157,7 @@ print(combi.shape)
 combi.head(3)
 
 
-# In[13]:
+# In[15]:
 
 train = combi[combi["Category"].notnull()]
 
@@ -148,7 +167,7 @@ print(train.shape)
 train.head(3)
 
 
-# In[14]:
+# In[16]:
 
 test = combi[combi["Category"].isnull()]
 
@@ -163,7 +182,7 @@ test.head(3)
 
 # ## Score
 
-# In[15]:
+# In[17]:
 
 label_name = "Category"
 feature_names = train.columns.difference([label_name])
@@ -174,7 +193,7 @@ print(X_train.shape)
 X_train.head(3)
 
 
-# In[16]:
+# In[18]:
 
 y_train = train[label_name]
 
@@ -184,7 +203,7 @@ y_train.head(3)
 
 # ### Evaluate using Naive Bayes
 
-# In[17]:
+# In[19]:
 
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.cross_validation import cross_val_score, StratifiedKFold
@@ -192,7 +211,7 @@ from sklearn.cross_validation import cross_val_score, StratifiedKFold
 kfold = StratifiedKFold(y_train, n_folds=6)
 
 model = BernoulliNB()
-get_ipython().magic(u"time score = cross_val_score(model, X_train, y_train, cv=kfold, scoring='log_loss').mean()")
+get_ipython().magic("time score = cross_val_score(model, X_train, y_train, cv=kfold, scoring='log_loss').mean()")
 score = -1.0 * score
 
 print("Use BernoulliNB. Score = {0:.6f}".format(score))
@@ -200,7 +219,7 @@ print("Use BernoulliNB. Score = {0:.6f}".format(score))
 
 # ## Predict
 
-# In[18]:
+# In[20]:
 
 X_test = test[feature_names]
 
@@ -208,7 +227,7 @@ print(X_test.shape)
 X_test.head(3)
 
 
-# In[19]:
+# In[21]:
 
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.cross_validation import cross_val_score, StratifiedKFold
@@ -222,7 +241,7 @@ print(prediction.shape)
 prediction[:1]
 
 
-# In[20]:
+# In[22]:
 
 submission = pd.DataFrame(prediction, index=X_test.index, columns = sample.columns)
 submission = submission.reindex_axis(sorted(submission.columns), axis=1,)
@@ -231,19 +250,21 @@ print(submission.shape)
 submission.head(3)
 
 
-# In[21]:
+# In[23]:
 
 from datetime import datetime
 
 current_time = datetime.now()
 current_time = current_time.strftime("%Y%m%d%H%M%S")
 
-csv_filename = "../submissions/" + current_time + "_" + "baseline_script.csv"
+description = "treat-more-on-dates"
+
+csv_filename = "../submissions/" + current_time + "_" + description + ".csv"
 
 submission.to_csv(csv_filename)
 
 
-# In[22]:
+# In[24]:
 
 import gzip
 
