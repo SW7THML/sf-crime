@@ -1,3 +1,4 @@
+.DS_Store
 data/train.csv
 data/test.csv
 data/sampleSubmission.csv
