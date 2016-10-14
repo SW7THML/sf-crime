@@ -128,9 +128,46 @@ print(combi.shape)
 combi.head(3)
 
 
-# ### Split to train / test dataset
+# ### One hot encode address
 
 # In[12]:
+
+# 누적값이 200개 이하인 경우는 'Others'로 바꾼다.
+address_counts = combi["Address"].value_counts()
+other_index = address_counts[address_counts < 200].index
+combi.loc[combi["Address"].isin(other_index), "Address"] = "Others"
+
+print("The number of address types = {address}".format(address=len(combi["Address"].value_counts())))
+print(combi.shape)
+combi.head()
+
+
+# In[13]:
+
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+
+label_encoder = LabelEncoder()
+one_hot_encoder = OneHotEncoder(dtype=np.bool)
+
+combi["Address(encode)"] = label_encoder.fit_transform(combi["Address"])
+address = one_hot_encoder.fit_transform(combi[["Address(encode)"]])
+
+print(address.shape)
+address
+
+
+# In[14]:
+
+train_address = address[:len(train), :]
+test_address = address[len(train):, :]
+
+print("Train = {0}".format(train_address.shape))
+print("Test = {0}".format(test_address.shape))
+
+
+# ### Split to train / test dataset
+
+# In[15]:
 
 combi.drop("Address", axis=1, inplace=True)
 
@@ -138,7 +175,7 @@ print(combi.shape)
 combi.head(3)
 
 
-# In[13]:
+# In[16]:
 
 train = combi[combi["Category"].notnull()]
 
@@ -148,7 +185,7 @@ print(train.shape)
 train.head(3)
 
 
-# In[14]:
+# In[17]:
 
 test = combi[combi["Category"].isnull()]
 
@@ -163,7 +200,7 @@ test.head(3)
 
 # ## Score
 
-# In[15]:
+# In[18]:
 
 label_name = "Category"
 feature_names = train.columns.difference([label_name])
@@ -174,7 +211,15 @@ print(X_train.shape)
 X_train.head(3)
 
 
-# In[16]:
+# In[19]:
+
+from scipy.sparse import hstack
+
+X_train = hstack((X_train.values.astype(np.float32), train_address.astype(np.float32)))
+X_train
+
+
+# In[20]:
 
 y_train = train[label_name]
 
@@ -184,7 +229,7 @@ y_train.head(3)
 
 # ### Evaluate using Naive Bayes
 
-# In[17]:
+# In[21]:
 
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.cross_validation import cross_val_score, StratifiedKFold
@@ -192,7 +237,7 @@ from sklearn.cross_validation import cross_val_score, StratifiedKFold
 kfold = StratifiedKFold(y_train, n_folds=6)
 
 model = BernoulliNB()
-get_ipython().magic(u"time score = cross_val_score(model, X_train, y_train, cv=kfold, scoring='log_loss').mean()")
+get_ipython().magic("time score = cross_val_score(model, X_train, y_train, cv=kfold, scoring='log_loss').mean()")
 score = -1.0 * score
 
 print("Use BernoulliNB. Score = {0:.6f}".format(score))
@@ -200,7 +245,7 @@ print("Use BernoulliNB. Score = {0:.6f}".format(score))
 
 # ## Predict
 
-# In[18]:
+# In[22]:
 
 X_test = test[feature_names]
 
@@ -208,7 +253,13 @@ print(X_test.shape)
 X_test.head(3)
 
 
-# In[19]:
+# In[23]:
+
+X_test = hstack((X_test.values.astype(np.float32), test_address.astype(np.float32)))
+X_test
+
+
+# In[24]:
 
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.cross_validation import cross_val_score, StratifiedKFold
@@ -222,28 +273,29 @@ print(prediction.shape)
 prediction[:1]
 
 
-# In[20]:
+# In[25]:
 
-submission = pd.DataFrame(prediction, index=X_test.index, columns = sample.columns)
+submission = pd.DataFrame(prediction, index=test.index, columns = sample.columns)
 submission = submission.reindex_axis(sorted(submission.columns), axis=1,)
 
 print(submission.shape)
 submission.head(3)
 
 
-# In[21]:
+# In[26]:
 
 from datetime import datetime
 
 current_time = datetime.now()
 current_time = current_time.strftime("%Y%m%d%H%M%S")
 
-csv_filename = "../submissions/" + current_time + "_" + "baseline_script.csv"
+description = "one-hot-encode-address"
+csv_filename = "../submissions/" + current_time + "_" + description + ".csv"
 
 submission.to_csv(csv_filename)
 
 
-# In[22]:
+# In[27]:
 
 import gzip
 
@@ -256,4 +308,9 @@ f_out.writelines(f_in)
 f_out.close()
 
 f_in.close()
+
+
+# In[ ]:
+
+
 
